@@ -1,0 +1,83 @@
+#!/bin/bash
+##############################################################################
+#
+# bootstrap
+# -----------------------
+# Setup a virtualenv, without ever using sudo.
+#
+# @author Isis Agora Lovecruft, 0x2cdb8b35
+# @date 18 February 2013
+# @version 0.0.1
+##############################################################################
+
+set -e --
+
+PYTHON=$(which python)
+GIT=$(which git)
+
+VENV_VERSION=1.8.4
+VENV_URL=https://pypi.python.org/packages/source/v/virtualenv
+VENV_TARBALL=virtualenv-${VENV_VERSION}.tar.gz
+
+VENV_WRAPPER_VERSION=3.6
+VENV_WRAPPER_URL=https://pypi.python.org/packages/source/v/virtualenvwrapper
+VENV_WRAPPER_TARBALL=virtualenvwrapper-${VENV_WRAPPER_VERSION}.tar.gz
+
+BOOTSTRAP_ENV=${HOME}/.bootstrap
+BOOTSTRAP_OPTS='--no-site-packages --setuptools --unzip-setuptools --never-download'
+
+PACKAGE_NAME=sousveillance
+## use these if you want users to wget this bootstrap script and have the script
+## do a git clone on the repo for them, and then setup the virtualenv in the cloned
+## repo:
+#PACKAGE_URL=https://github.com/isislovecruft/sousveillance.git
+#PACKAGE_WORKON=${PWD}/${PACKAGE_NAME}
+#PACKAGE_REQUIREMENTS=${PACKAGE_WORKON}/requirements.pip
+## use this if the user has already cloned the repository, and you want to use the
+## repo directory (which this script should currently be in) as the base of the
+## project virtualenv:
+PACKAGE_WORKON=${PWD}
+PACKAGE_REQUIREMENTS=${PACKAGE_WORKON}/requirements.pip
+PACKAGE_OPTS=${BOOTSTRAP_OPTS}'' ## xxx add parameter for extra options
+
+if ! test -d "${BOOTSTRAP_ENV}" ; then
+    echo 'Downloading virtualenv source from'
+    echo "${VENV_URL}..."
+    \wget -O ${VENV_TARBALL} ${VENV_URL}/${VENV_TARBALL}
+    tar xvzf ${VENV_TARBALL} 
+
+    ## xxx TODO: virtualenv wrapper does *not* work from a virtualenv, because it
+    ##           uses a ton of hardcoded system paths...
+    #echo 'Downloading virtualenv-wrapper source from:'
+    #echo "${VENV_WRAPPER_URL}"
+    #\wget -O $VENV_WRAPPER_TARBALL ${VENV_WRAPPER_URL}/${VENV_WRAPPER_TARBALL}
+
+    echo 'Creating initial virtualenv bootstrap environment, called "bootstrap"'
+    echo 'in which we will install virtualenv, to avoid using sudo.'
+    $PYTHON virtualenv-${VENV_VERSION}/virtualenv.py $BOOTSTRAP_OPTS $BOOTSTRAP_ENV
+
+    echo "Installing virtualenv from source tarball in ${BOOTSTRAP_ENV}..."
+    ${BOOTSTRAP_ENV}/bin/pip install ${VENV_TARBALL}
+    #echo 'Installing virtualenvwrapper in "bootstrap" virtualenv...'
+    #source ${BOOTSTRAP_ENV}/bin/activate
+    #${BOOTSTRAP_ENV}/bin/pip install ${VENV_WRAPPER_TARBALL}
+
+    echo 'Removing downloaded virtualenv source directory...'
+    rm -rf virtualenv-${VENV_VERSION}
+    echo "Removing ${VENV_TARBALL}..."
+    rm ${VENV_TARBALL}
+    #echo "Removing ${VENV_WRAPPER_TARBALL}..."
+    #rm ${VENV_WRAPPER_TARBALL}
+    #source ${BOOTSTRAP_ENV}/local/bin/virtualenvwrapper.sh
+
+else
+    echo "Found previous bootstrap environment at ${BOOTSTRAP_ENV}, using that."
+fi
+
+
+echo 'Using "bootstrap" virtualenv to create project virtualenv...'
+if test -n "${PACKAGE_URL}" ; then
+    echo "Cloning from ${PACKAGE_URL}..."
+    ${GIT} clone ${PACKAGE_URL} ${PACKAGE_NAME}
+fi
+${BOOTSTRAP_VENV}/bin/virtualenv ${PACKAGE_OPTS} ${PACKAGE_NAME}
