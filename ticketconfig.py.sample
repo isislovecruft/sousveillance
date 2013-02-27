@@ -28,41 +28,29 @@
 
 ###
 
-import supybot.utils as utils
-from supybot.commands import *
-import supybot.plugins as plugins
-import supybot.ircmsgs as ircmsgs
-import supybot.ircutils as ircutils
-import supybot.callbacks as callbacks
+from tickethelpers import *
 
-from ticketconfig import TicketConfig
+class TicketConfig:
+    def __init__(self):
+        self.providers = {}
+        self.providers['trac.torproject.org'] = TicketHtmlTitleProvider(
+            'https://trac.torproject.org/projects/tor/ticket/',
+            ReGroupFixup('.*?\((.*)\).*? Tor Bug Tracker & Wiki$')
+            )
+        self.providers['proposal.torproject.org'] = TorProposalProvider(
+            fixup=lambda i,x: "Prop#%s: %s"%(i,x) )
+        self.providers['github.com-tor-ooni-probe-pull'] = TicketHtmlTitleProvider(
+            'https://github.com/TheTorProject/ooni-probe/pull/',
+            ReGroupFixup('.*?(.*) . Pull Request #[0-9]+ . TheTorProject/ooni-probe . GitHub$', "PR")
+            )
 
+        self.channels = {}
+        for tor in ('#tor-test', '#ooni', '#nottor', '#tor-dev', '#tor'):
+            self.channels[tor] = TicketChannel()
+            self.channels[tor].addProvider('(?<!\w)(?:#|https://trac.torproject.org/projects/tor/ticket/)([0-9]+)(?:(?=\W)|$)', self.providers['trac.torproject.org'])
+            self.channels[tor].addProvider('(?<!\w)[Pp]rop#([0-9]+)(?:(?=\W)|$)', self.providers['proposal.torproject.org'])
 
-class Ticket(callbacks.Plugin):
-    def __init__(self, irc):
-        self.__parent = super(Ticket, self)
-        self.__parent.__init__(irc)
-
-        self._config = TicketConfig()
-
-        self.providers = self._config.providers
-        self.channels = self._config.channels
-
-    def _processLine(self, channel, payload):
-        for res in channel.doPrivmsg(payload):
-            yield '[%s]'%(res,)
-
-    def doPrivmsg(self, irc, msg):
-        if irc.isChannel(msg.args[0]):
-            (tgt, payload) = msg.args
-            print "foo"
-            if tgt in self.channels:
-                for line in self._processLine(self.channels[tgt], payload):
-                    irc.queueMsg(ircmsgs.notice(tgt, line.encode('utf-8')))
-                    irc.noReply()
-
-
-Class = Ticket
-
+        self.channels['#ooni'].addProvider('(?<!\w)PR#([0-9]+)(?:(?=\W)|$)', self.providers['github.com-tor-ooni-probe-pull'])
+        self.channels['#tor-test'].addProvider('(?<!\w)[Pp][Rr]#([0-9]+)(?:(?=\W)|$)', self.providers['github.com-tor-ooni-probe-pull'])
 
 # vim:set shiftwidth=4 softtabstop=4 expandtab:
