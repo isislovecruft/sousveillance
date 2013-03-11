@@ -45,10 +45,4 @@ Ticket = conf.registerPlugin('Ticket')
 # conf.registerGlobalValue(Ticket, 'someConfigVariableName',
 #     registry.Boolean(False, """Help for someConfigVariableName."""))
 
-conf.registerChannelValue(Ticket, 'url',
-    registry.String('', """Base URL to Ticketing instance.  Should accept ${url}${number}"""))
-conf.registerChannelValue(Ticket, 'filter',
-    registry.String('', """Regex to apply to ticket title - first group gets
-    taken as title"""))
-
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
