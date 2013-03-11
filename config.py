@@ -51,4 +51,10 @@ conf.registerChannelValue(Ticket, 'filter',
     registry.String('', """Regex to apply to ticket title - first group gets
     taken as title"""))
 
-# vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
+PullRequest = conf.registerPlugin('PullRequest')
+conf.registerChannelValue(PullRequest, 'time',
+                          registry.String('',
+                                          """Time in minutes between checks for new pull requests."""))
+conf.registerChannelValue(PullRequest, 'url',
+                          registry.String('',
+                                          """URL of pull request."""))
