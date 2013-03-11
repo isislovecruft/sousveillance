@@ -24,7 +24,7 @@ VENV_WRAPPER_URL=https://pypi.python.org/packages/source/v/virtualenvwrapper
 VENV_WRAPPER_TARBALL=virtualenvwrapper-${VENV_WRAPPER_VERSION}.tar.gz
 
 BOOTSTRAP_ENV=${HOME}/.bootstrap
-BOOTSTRAP_OPTS='--no-site-packages --setuptools --unzip-setuptools --never-download'
+BOOTSTRAP_OPTS='--no-site-packages --setuptools --unzip-setuptools'
 
 PACKAGE_NAME=sousveillance
 ## use these if you want users to wget this bootstrap script and have the script
