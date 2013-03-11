@@ -28,11 +28,6 @@
 
 ###
 
-import BeautifulSoup
-import re
-import time
-import urllib2
-
 import supybot.utils as utils
 from supybot.commands import *
 import supybot.plugins as plugins
@@ -40,76 +35,37 @@ import supybot.ircmsgs as ircmsgs
 import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 
+try:
+    import ticketconfig_private as ticketconfig
+except ImportError:
+    import ticketconfig
+reload(ticketconfig)
+
 
 class Ticket(callbacks.Plugin):
-    expireTimeout = 1800
-    minDelta = 300
-
-    """Add the help for "@plugin help Ticket" here
-    This should describe *how* to use this plugin."""
     def __init__(self, irc):
         self.__parent = super(Ticket, self)
         self.__parent.__init__(irc)
 
-        self.cache = {}
+        self._config = ticketconfig.TicketConfig()
 
-    def _maybeExpire(self, url, ticketnumber):
-        if not ticketnumber in self.cache[url]: return
-        if self.cache[url][ticketnumber]['expire'] < time.time():
-            del self.cache[url][ticketnumber]
-
-    def _getTicketInfo(self, channel, url, ticketnumber):
-        response = urllib2.urlopen('%s%s'%(url, ticketnumber))
-
-        data = response.read()
-
-        charset = response.headers.getparam('charset')
-        if charset: data = data.decode(charset)
-
-        b = BeautifulSoup.BeautifulSoup(data, convertEntities=BeautifulSoup.BeautifulSoup.HTML_ENTITIES)
-        title = b.find('title').contents[0]
-        title = re.sub('\s+', ' ', title).strip()
-
-        filt = self.registryValue('filter', channel)
-        if filt:
-            m = re.match(filt, title)
-            if m and len(m.groups()) > 0:
-                title = m.group(1)
-
-        return { 'expire': time.time() + self.expireTimeout,
-                 'title': title }
-
-    def _printTitle(self, channel, ticketnumber):
-        url = self.registryValue('url', channel)
-        if not url: return
-        if not url in self.cache: self.cache[url] = {}
-
-        self._maybeExpire(url, ticketnumber)
-        if not ticketnumber in self.cache[url]:
-            self.cache[url][ticketnumber] = self._getTicketInfo(channel, url, ticketnumber)
-        if ticketnumber in self.cache[url]:
-            if 'last' in self.cache[url][ticketnumber] and \
-               self.cache[url][ticketnumber]['last'] >= time.time() - self.minDelta:
-                return
-            self.cache[url][ticketnumber]['last'] = time.time()
-            return '[#%s - %s]'%(ticketnumber, self.cache[url][ticketnumber]['title'])
+        self.providers = self._config.providers
+        self.channels = self._config.channels
 
     def _processLine(self, channel, payload):
-        matches = re.findall('(?<!\S)#([0-9]+)(?=[\s,.-;:])', payload)
-        for m in matches:
-            title = self._printTitle(channel, m)
-            if title: yield title
+        for res in channel.doPrivmsg(payload):
+            yield '[%s]'%(res,)
 
     def doPrivmsg(self, irc, msg):
         if irc.isChannel(msg.args[0]):
-            (channel, payload) = msg.args
-
-            for line in self._processLine(channel, payload):
-                irc.queueMsg(ircmsgs.notice(channel, line.encode('utf-8')))
-            irc.noReply()
+            (tgt, payload) = msg.args
+            if tgt in self.channels:
+                for line in self._processLine(self.channels[tgt], payload):
+                    irc.queueMsg(ircmsgs.notice(tgt, line.encode('utf-8')))
+                    irc.noReply()
 
 
 Class = Ticket
 
 
-# vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:
+# vim:set shiftwidth=4 softtabstop=4 expandtab:
